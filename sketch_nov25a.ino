@@ -52,46 +52,6 @@ void setup() {
 void loop() {
   PID_control();
 
-//  bloque();
-//  //moveCar();
-//  tiempo = millis();
-//    
-//    if((tiempo >= inicio) && (tiempo <= tiempo_1)){ //0 a 2000
-//      analogWrite(ENA,100);
-//      analogWrite(ENB,115);
-//      digitalWrite(in1, HIGH);
-//      digitalWrite(in2,LOW);
-//      digitalWrite(in3, HIGH);
-//      digitalWrite(in4,LOW);
-//    }
-//    
-//    else if((tiempo > tiempo_1) && (tiempo <= tiempo_2)){ //2000 a 3000
-//      analogWrite(ENA,0);
-//      analogWrite(ENB,0);
-//      digitalWrite(in1, LOW);
-//      digitalWrite(in2,LOW);
-//      digitalWrite(in3, LOW);
-//      digitalWrite(in4,LOW);
-//    }
-////    else if((tiempo > tiempo_2) && (tiempo <= tiempo_3)){ // 3000 a 5000
-////
-////      analogWrite(ENA,100);
-////      analogWrite(ENB,156);
-////      digitalWrite(in1, LOW);
-////      digitalWrite(in2,HIGH);
-////      digitalWrite(in3, LOW);
-////      digitalWrite(in4,HIGH);
-////    }
-////    else{
-////      analogWrite(ENA,0);
-////      analogWrite(ENB,0);
-////      digitalWrite(in1, LOW);
-////      digitalWrite(in2,LOW);
-////      digitalWrite(in3, LOW);
-////      digitalWrite(in4,LOW);
-////    }
-//  
-//}
 
 //void bloque(){
 //  static int i = 0;
@@ -112,11 +72,9 @@ void loop() {
 //    }
 //  }
 //}
-
-
   
 }
-void foward_backwards(int posa, int posb, bool dir, bool lado){
+void foward_backwards(int posa, int posb, bool dir){
   tiempo = millis();
 
   if(dir == true){                // Si dir mover hacia adelante
@@ -127,7 +85,7 @@ void foward_backwards(int posa, int posb, bool dir, bool lado){
     digitalWrite(in3, HIGH);
     digitalWrite(in4,LOW);
   }
-  else if(dir == false){                   // else mover hacia atras
+  else if(dir == false){           // else mover hacia atras
     analogWrite(ENA,posa);
     analogWrite(ENB,posb);
     digitalWrite(in1, LOW);
@@ -135,18 +93,9 @@ void foward_backwards(int posa, int posb, bool dir, bool lado){
     digitalWrite(in3, LOW);
     digitalWrite(in4,HIGH);
   }
-  if (lado == 1){
-    analogWrite(ENA,posa);
-    analogWrite(ENB,posb);
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2,LOW);
-    digitalWrite(in3, LOW);
-    digitalWrite(in4,HIGH);
-  }
 }
 
 void PID_control(){
-
   int i;
   uint16_t blocks;
   blocks = pixy.getBlocks();
@@ -155,14 +104,15 @@ void PID_control(){
     for(i=0; i<=blocks;i++){
       uint16_t ancho = pixy.blocks[i].width;
       uint16_t alto = pixy.blocks[i].height;
+      uint16_t posX = pixy.blocks[i]. ; 
+      
       area = ancho * alto;
       pixy.blocks[i].print();
     }
   }
   
+  int error = 5500 - area;
   
-  
-  int error = 654 - area;
   bool direccion;
   bool lados;
 
@@ -175,9 +125,21 @@ void PID_control(){
 
   int motorspeeda = basespeeda + motorspeed;
   int motorspeedb = basespeedb - motorspeed;
+  if (motorspeeda > maxspeeda) {
+    motorspeeda = maxspeeda;
+  }
+  if (motorspeedb > maxspeedb) {
+    motorspeedb = maxspeedb;
+  }
+  if (motorspeeda < 0) {
+    motorspeeda = 0;
+  }
+  if (motorspeedb < 0) {
+    motorspeedb = 0;
+  } 
 
 
-  if ((area >= 5000) && (area < 6000)){     //Si se encuentra dentro del rango no mover ni hacia adelante ni hacia atras
+  /*if ((area >= 5000) && (area < 6000)){     //Si se encuentra dentro del rango no mover ni hacia adelante ni hacia atras
     direccion = false;
     lados = false;
     motorspeeda = 0;
@@ -207,7 +169,7 @@ void PID_control(){
   else{
     motorspeeda = 0;
     motorspeedb = 0;
-  }
+  }*/
   
   Serial.print(area);
   
