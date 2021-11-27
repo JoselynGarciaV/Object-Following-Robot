@@ -3,9 +3,9 @@
 
 Pixy pixy;
 
-float Kp = 0;
-float Kd = 0;
-float Ki = 0;
+float Kp = 0.07;
+float Kd = 0.6;
+float Ki = 0.0008;
 
 int P;
 int I;
@@ -15,7 +15,7 @@ int lastError = 0;
 
 int ancho;
 int alto;
-int area;
+int long area;
 
 int in1 = 6;
 int in2 = 7;
@@ -31,8 +31,8 @@ const long tiempo_1 = 3000;
 const long tiempo_2 = 4000;
 const long tiempo_3 = 5000;
 
-const uint8_t maxspeeda = 70;
-const uint8_t maxspeedb = 70;
+const uint8_t maxspeeda = 100;
+const uint8_t maxspeedb = 110;
 const uint8_t basespeeda = 100;
 const uint8_t basespeedb = 100;
 
@@ -116,10 +116,10 @@ void loop() {
 
   
 }
-void foward_backwards(int posa, int posb,int dir, int lado){
+void foward_backwards(int posa, int posb, bool dir, bool lado){
   tiempo = millis();
 
-  if(dir == 1){                // Si dir mover hacia adelante
+  if(dir == true){                // Si dir mover hacia adelante
     analogWrite(ENA,posa);
     analogWrite(ENB,posb);
     digitalWrite(in1, HIGH);
@@ -127,7 +127,7 @@ void foward_backwards(int posa, int posb,int dir, int lado){
     digitalWrite(in3, HIGH);
     digitalWrite(in4,LOW);
   }
-  else if(dir == 0){                   // else mover hacia atras
+  else if(dir == false){                   // else mover hacia atras
     analogWrite(ENA,posa);
     analogWrite(ENB,posb);
     digitalWrite(in1, LOW);
@@ -163,8 +163,8 @@ void PID_control(){
   
   
   int error = 654 - area;
-  int direccion;
-  int lados;
+  bool direccion;
+  bool lados;
 
   P = error;
   I = I + error;
@@ -177,35 +177,39 @@ void PID_control(){
   int motorspeedb = basespeedb - motorspeed;
 
 
-  if ((area >= 400)&& (area < 600)){     //Si se encuentra dentro del rango no mover ni hacia adelante ni hacia atras
-    direccion = 0;
-    lados = 0;
+  if ((area >= 5000) && (area < 6000)){     //Si se encuentra dentro del rango no mover ni hacia adelante ni hacia atras
+    direccion = false;
+    lados = false;
     motorspeeda = 0;
     motorspeedb = 0;
     
   }
-  else if(area >= 600){
-    direccion = 1; 
-    lados = 0;                //Mover hacia delante
+  else if((area < 5000)&&(area >= 1000)){
+    direccion = true; 
+    lados = false;                //Mover hacia delante
     motorspeeda = maxspeeda;
     motorspeedb = maxspeedb;
     
   }
-  else if(area < 400){            //Mover hacia atras
-    direccion = 0;
-    lados = 0;
+  else if(area >= 6000){            //Mover hacia atras
+    direccion = false;
+    lados = false;
     motorspeeda = maxspeeda;
     motorspeedb = maxspeedb;
     
   }
-  else{                         //Cuando no detecte el objeto mover hacia los lados
-    lados = 1;
-    motorspeeda = maxspeeda;
-    motorspeedb = maxspeedb;
-    
-    
+  else if(area < 1000){                         //Cuando no detecte el objeto mover hacia los lados
+    lados = true;
+    motorspeeda = 0;
+    motorspeedb = 0;
   }
+  
+  else{
+    motorspeeda = 0;
+    motorspeedb = 0;
+  }
+  
   Serial.print(area);
+  
   foward_backwards(motorspeeda, motorspeedb, direccion, lados);
-
 }
