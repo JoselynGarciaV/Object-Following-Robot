@@ -3,9 +3,13 @@
 
 Pixy pixy;
 
-float Kp = 0.8;
-float Kd = 0.9;
-float Ki = 0.08;
+float Kp = 5;
+float Kd = 2;
+float Ki = 0.8;
+
+float Kp2 = 70;
+float Kd2 = 50;
+float Ki2 = 30;
 
 int P;
 int I;
@@ -21,7 +25,9 @@ int ancho;
 int alto;
 int long area;
 signed long int error;
-unsigned long int error2;
+//unsigned long int  error2;
+long int  error2;
+signed long int errorx;
 
 int in1 = 6;
 int in2 = 7;
@@ -32,9 +38,9 @@ int ENB = 5;
 
 bool delante;
 
-const uint8_t maxspeeda = 150;
+const uint8_t maxspeeda = 160;
 const uint8_t maxspeedb = 160;
-const uint8_t basespeeda = 100;
+const uint8_t basespeeda = 110;
 const uint8_t basespeedb = 110;
 
 void setup() {
@@ -61,17 +67,22 @@ void PID_control(){
   int i;
   uint16_t blocks;
   blocks = pixy.getBlocks();
+  //Serial.println(blocks);
+  delay(20);
   
   if(blocks){
     for(i=0; i<=blocks;i++){
       uint16_t ancho = pixy.blocks[i].width;
       uint16_t alto = pixy.blocks[i].height;
-      uint16_t posX = pixy.blocks[i].x;
+      int posX = pixy.blocks[i].x;
+      delay(20);
       area = ancho * alto;
       error = 11000 - area;     // referencia a 20 cm son 11000 del area
-      error2 = 160 - posX;
-      Serial.print(error); 
-      Serial.print('\n'); 
+      errorx = 160 - posX;
+      //error2 = abs (errorx);
+      //Serial.println(error); 
+
+      //Serial.println(errorx);
 
       P = error;
       I = I + error;
@@ -81,57 +92,63 @@ void PID_control(){
     
       int motorspeed = P*Kp + I*Ki + D*Kd;
     
-      int motorspeeda = basespeeda + motorspeed;
-      int motorspeedb = basespeedb - motorspeed;
+      int motorspeeda = /*basespeeda + */motorspeed;
+      int motorspeedb = /*basespeedb - */motorspeed;
+      //Serial.println(motorspeed);
     
+      if ((errorx <= 80) && (errorx >= -80)){
+        if((error >= 3000) && (error < 10000)){                                  // Si el objeto esta muy lejos, mover los motores a favor a las manecillas del reloj
+          delante = true;
+          forward_backwards(motorspeeda, motorspeedb, delante);
+          break;
+          }
+        else if((error < -1000) && (error > -40000 )){                            // Si el objeto esta muy cerca, mover los motores en sentido contrario a las manecillas del reloj
+          delante = false;
+          forward_backwards(motorspeeda, motorspeedb, delante);
+          break;
+          }
+        else if((error >= -1000) && (error < 3000)){       // Zona muerta
+          forward_backwards(0, 0, delante); 
+          break;
+          }
+        else if((error >= 10000) && (error < 13000)){      //No activarse con falsos positivos
+          forward_backwards(0, 0, delante);
+          break;
+          }
+      break;   
+      }
       
-      if((error >= 3000) && (error < 10000)){                                  // Si el objeto esta muy lejos, mover los motores a favor a las manecillas del reloj
-        delante = true;
-        forward_backwards(motorspeeda, motorspeedb, delante);
-        break;
+      else{
+        P2 = errorx;
+        I2 = I2 + errorx;
+        D2 = errorx - lastError2;
+        lastError2 = errorx;
+        
+        int motorspeed2 = P2*Kp2 + I2*Ki2 + D2*Kd2;
+        int motorspeeda2 = 0;
+        int motorspeedb2 = 0;
+        Serial.println(errorx);
+        
+        if (errorx <= -80){
+          motorspeeda2 = motorspeed2;
+          motorspeedb2 = motorspeed2;
+          forward_brake(motorspeeda2, motorspeedb2,true);
         }
-      else if((error < -1000) && (error > -30000 )){                            // Si el objeto esta muy cerca, mover los motores en sentido contrario a las manecillas del reloj
-        delante = false;
-        forward_backwards(motorspeeda, motorspeedb, delante);
-        break;
+        else if(errorx >= 80){
+          motorspeeda2 = motorspeed2;
+          motorspeedb2 = motorspeed2;
+          forward_brake(motorspeeda2, motorspeedb2,false);
         }
-      else if((error >= -1000) && (error < 3000)){       // Zona muerta
-        forward_backwards(0, 0, delante); 
+        //Serial.println(motorspeed2);
         break;
-        }
-      else if((error >= 10000) && (error < 13000)){      //No activarse con falsos positivos
-        forward_backwards(0, 0, delante);
-        break;
-        }
-      //forward_backwards(motorspeeda, motorspeedb, delante);
+      }
     }
   }
-}/*
-void PID_control_lados(){
-  int j;
-  uint16_t blocks;
-  blocks = pixy.getBlocks();
   
-  if(blocks){
-    for(j=0; j<=blocks;j++){
-      uint16_t posX = pixy.blocks[j].x;
-      error2 = 160 - posX;            //posicion en el centro de la pantalla x = 160
-      
-      P2 = error2;
-      I2 = I2 + error2;
-      D2 = error2  - lastError2;
-      lastError2 = error2;
-    
-      int motorspeed = P*Kp + I*Ki + D*Kd;
-    
-      int motorspeeda2 = basespeeda + motorspeed;
-      int motorspeedb2 = basespeedb - motorspeed;
-   
-      forward_brake(motorspeeda2, motorspeedb2);
-    }
+  else if(!blocks){
+    forward_brake(0, 0,false);
   }
-}*/
-
+}
 
 void forward_backwards(int posa, int posb, bool direccion){
 
@@ -153,11 +170,26 @@ void forward_backwards(int posa, int posb, bool direccion){
   }
 }
 
-void forward_brake(int posx, int posy) {
+void forward_brake(int posx, int posy, bool derizq) {
+  if (derizq == true){
     analogWrite(ENA,posx);
-    analogWrite(ENB,posx);
-    digitalWrite(in1, HIGH);
+    analogWrite(ENB,posy);
+    digitalWrite(in1, HIGH); 
     digitalWrite(in2,LOW);
+    digitalWrite(in3, LOW);
+    digitalWrite(in4,HIGH);
+  }
+    
+  else if(derizq == false){
+    analogWrite(ENA,posx);
+    analogWrite(ENB,posy);
+    digitalWrite(in1, LOW); 
+    digitalWrite(in2,HIGH);
     digitalWrite(in3, HIGH);
     digitalWrite(in4,LOW);
+    
+  }
+
+
+    
 }
